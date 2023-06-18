@@ -1,19 +1,19 @@
 import socket
+import threading
 
 HEADER=64 #how many bytes we are going to recive it 
 FORMAT='utf-8'
 DISCONNECT_MESSAGE="!DICONNECT"
-server1_Flag=0
-server2_Flag=1
+
 ClientPORT=8080
 
 
 SERVER=socket.gethostbyname(socket.gethostname())
 ADDR=(SERVER, ClientPORT)
+alias = input('Choose an alias >>> ')
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-
-def CheckConnection():
+client.connect_ex((SERVER, ClientPORT))
+"""def CheckConnection():
     global resultcheck
     #devicesock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.settimeout(5) #set a timeout value of seconds for socket operations.
@@ -46,4 +46,30 @@ def Send(msg):
     print(client.recv(2048).decode(FORMAT))
 
          
+CheckConnection() """
 
+def client_receive():
+    while True:
+        try:
+            message = client.recv(200).decode('utf-8')
+            if message == "alias?":
+                client.send(alias.encode('utf-8'))
+            else:
+                print(message)
+        except:
+            print('Error!')
+            client.close()
+            break
+
+
+def client_send():
+    while True:
+        message = f'{alias}: {input("")}'
+        client.send(message.encode('utf-8'))
+
+
+receive_thread = threading.Thread(target=client_receive)
+receive_thread.start()
+
+send_thread = threading.Thread(target=client_send)
+send_thread.start()
