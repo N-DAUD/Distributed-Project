@@ -53,7 +53,7 @@ def handle_Client_ServerChat(conn, addr):
 def startServerChat():
       server1chat.listen()#listening for a new connection 
     
-      print(f"listening server 2 is listening on {CHATSERVER} ")
+      print(f"listening server 1 Chat is listening on {CHATSERVER} ")
       while True:
        #wait for a new connection to the server 
        #when the connection occur we store the address--> what ip address and what port it came from
