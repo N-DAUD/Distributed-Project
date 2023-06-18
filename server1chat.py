@@ -11,10 +11,10 @@ PORT = 8080
 # because we do not need to make it hard coded 
 CHATSERVER=socket.gethostbyname(socket.gethostname())
 ADDR=(CHATSERVER, PORT)
-server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server1chat = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 try:
- server2.bind(ADDR) #bind the socket to the address 
+ server1chat.bind(ADDR) #bind the socket to the address 
 
 except socket.error as e:
   print(str(e))
@@ -50,8 +50,8 @@ def handle_Client_ServerChat(conn, addr):
     conn.close()
 
 
-def startServer2():
-      server2.listen()#listening for a new connection 
+def startServerChat():
+      server1chat.listen()#listening for a new connection 
     
       print(f"listening server 2 is listening on {CHATSERVER} ")
       while True:
@@ -59,10 +59,10 @@ def startServer2():
        #when the connection occur we store the address--> what ip address and what port it came from
        # then we store an actual object 
        # that will allow us to send information back to that connection 
-       conn2 , addr2  = server2.accept()
+       conn , addr  = server1chat.accept()
 
        #when a new connection occur pass that connection to handle client  
-       thread= threading.Thread(target=handle_Client_ServerChat, args=(conn2, addr2))
+       thread= threading.Thread(target=handle_Client_ServerChat, args=(conn, addr))
        thread.start()
        #how many threads are active in this python process
        print(f"[ACTIVE CONNECTION]{threading.activeCount() - 1}") 
