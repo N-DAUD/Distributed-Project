@@ -3,7 +3,7 @@ import threading
 
 HEADER=64 #how many bytes we are going to recive it 
 FORMAT='utf-8'
-DISCONNECT_MESSAGE="!DICONNECT"
+DISCONNECT_MESSAGE="!DICONECT"
 PORT = 8080
 
 #def Server2NewConnection():
@@ -28,6 +28,28 @@ def ParseMessage(st):
         return "badop",0,0
     return str(st_list[0]), str(st_list[1]), str(st_list[2])
 
+
+class Message:
+       def __init__(self, text):
+        self.text = text
+        self.nextMessage = None
+ 
+class MessageList:
+       def __init__(self):
+        self.frontMessage = None
+
+       def add(self, text):
+         newMessage = Message(text)
+
+        # if the front message is empty add the front message to it 
+         if self.frontMessage is None:
+            self.frontMessage = newMessage
+
+         else:
+            newMessage.nextMessage = self.frontMessage
+            self.frontMessage = newMessage
+
+
 #this function will handle the communication between the client and the server
 #this function will run in parallel for each client  
 #conn is a socket object
@@ -41,7 +63,9 @@ def handle_Client_ServerChat(conn, addr):
         if msgLen: 
          msg_Length=int(msgLen) 
          msg=conn.recv(msg_Length).decode(FORMAT)
-
+         
+         MessageList.add(id,msg)
+           
          if msg ==DISCONNECT_MESSAGE:
             connected=False
             
@@ -69,25 +93,6 @@ def startServerChat():
 
 
 
-class Message:
-       def __init__(self, text):
-        self.text = text
-        self.nextMessage = None
- 
-class MessageList:
-       def __init__(self):
-        self.frontMessage = None
-
-       def add(self, text):
-         newMessage = Message(text)
-
-        # if the front message is empty add the front message to it 
-         if self.frontMessage is None:
-            self.frontMessage = newMessage
-
-         else:
-            newMessage.nextMessage = self.frontMessage
-            self.frontMessage = newMessage
 
 
 
