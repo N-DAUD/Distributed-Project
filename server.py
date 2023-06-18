@@ -1,72 +1,297 @@
 import socket
 import threading 
-#from server2 import*
+import random
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+
+password = "bs91HZDXuubCNpsE"
+uri = f"mongodb+srv://mostafahesham1939:{password}@games.w7y92bm.mongodb.net/?retryWrites=true&w=majority"
+
+clientdb = MongoClient(uri, server_api=ServerApi('1'))
+
+db = clientdb['projectgame']
+collection = db['players']
+
+print("Connected to MongoDB.")
+
+clients = []
+clients_lock = threading.Lock()
+display_width = 1280
+display_height = 720
+serverSocketLock = threading.RLock()
+
+ID = 3
+x=(display_width * 0.2) 
+x1=((display_width * 0.2) + 400)
+x2=((display_width * 0.2) + 800)
+y= display_height*0.8
+y1= display_height*0.8
+y2= display_height*0.8
+pos1= x, y
+pos2= x1, y1
+pos3= x2, y1
+
+pos_arr = pos1, pos2, pos3
+
+
+available_IDS = [0, 1, 2]
+
+print(pos_arr[0])
+print(pos_arr[1])
+print(pos_arr[2])
+
+
 
 
 HEADER=64 #how many bytes we are going to recive it 
 FORMAT='utf-8'
 DISCONNECT_MESSAGE="!DICONNECT"
 PORT = 5050
+
+#def Server2NewConnection():
 #that line of code instead of writing --> SERVER="192.168.1.6" 
 # because we do not need to make it hard coded 
-#socket.SOCK_STREAM is the socket type
-#AF_INET is the internet address family 
- 
-#SERVER="192.168.0.0"
-SERVER=socket.gethostbyname(socket.gethostname())
-ADDR=(SERVER, PORT)
+SERVER1=socket.gethostbyname(socket.gethostname())
+ADDR1=(SERVER1, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 try:
- server.bind(ADDR) #bind the socket to the address 
+ server.bind(ADDR1) #bind the socket to the address 
 
 except socket.error as e:
-     print(str(e))
- 
+  print(str(e))
+
+
+#Database functions#
+def store_player_data(user_id, user_score, win_user):
+    data = {
+        'user_id': user_id,
+        'user_score': user_score,
+        'win_user': win_user
+    }
+    # Store data in MongoDB
+    collection.update_one(
+        {'user_id': user_id},
+        {'$set': data},
+        upsert=True
+    )
+    print('Data stored successfully.')
+
+
+def retrieve_player_data(user_id):
+    # Retrieve data from MongoDB
+    data = collection.find_one({'user_id': user_id})
+    if data:
+        print('User ID:', data['user_id'])
+        print('User Score:', data['user_score'])
+        print('Win User:', data['win_user'])
+    else:
+        print('User not found.')
+
+
+def update_player_score(user_id, new_score):
+    # Update player score
+    collection.update_one(
+        {'user_id': user_id},
+        {'$set': {'user_score': new_score}}
+    )
+    print('Player score updated successfully.')
+
+
+def increment_player_score(user_id, increment):
+    # Increment player score
+    collection.update_one(
+        {'user_id': user_id},
+        {'$inc': {'user_score': increment}}
+    )
+    print('Player score incremented successfully.')
+
+
+def delete_player_data(user_id):
+    # Delete player data
+    result = collection.delete_one({'user_id': user_id})
+    if result.deleted_count > 0:
+        print('Player data deleted successfully.')
+    else:
+        print('Player not found.')
 
 #this function will handle the communication between the client and the server
 #this function will run in parallel for each client  
 #conn is a socket object
-def handle_Client(conn, addr):
-    print(f"[NEW CONNECTION] {addr} connected.")
+
+
+#Message Functions#
+
+def BuildMessage_pos(pos_arr):
+    return str(x)+","+str(x1)
+
+
+def BuildMessage_block(x ,x1 ):
+    serverSocketLock.acquire()
+    string = str(x)+","+str(x1)
+    serverSocketLock.release()
+    return string
+    
+
+def ParseMessage(st):
+    serverSocketLock.acquire()
+    st_list = st.split(',')
+    if (len(st_list)<4):
+        return "badop",0,0
+    serverSocketLock.release()
+    return str(st_list[0]), str(st_list[1]), str(st_list[2]), str(st_list[3])
+
+
+
+def Update(msg):
+    global pos1
+    global pos2
+    global pos3
+
+
+    serverSocketLock.acquire()
+    if msg[1] == "0":
+      pos1[0] = int(msg[2])
+      pos1[1] = int(msg[3])
+    elif msg[1] == "1":
+      pos2[0] = int(msg[2])
+      pos2[1] = int(msg[3]) 
+    elif msg[1] == "2":
+      pos3[0] = int(msg[2])
+      pos3[1] = int(msg[3])    
+
+    car1 = str(pos1[0])+","+str(pos1[1])
+    car2 = str(pos2[0])+","+str(pos2[1])
+    car3 = str(pos3[0])+","+str(pos3[1])
+
+    cars = car1 +"*"+car2 +"*"+car3
+    serverSocketLock.release()
+    return cars
+
+
+
+
+
+def handle_Client_Server(conn, addr1):
+    global ID
+    global available_IDS
+    global pos1
+    global pos2
+    global pos3
+
+    print(f"[NEW CONNECTION] {addr1} connected.")
     connected=True
     while connected:
         #wait till something is sent over the socket 
+        
         msgLen=conn.recv(HEADER).decode(FORMAT) #blocking line of code
+        serverSocketLock.acquire()
 
-        if msgLen: 
-         msg_Length=int(msgLen) 
-         msg=conn.recv(msg_Length).decode(FORMAT)
+        if msgLen:
+           
+          msg_Length=int(msgLen) 
+          msg=conn.recv(msg_Length).decode(FORMAT)
+          print("received")
 
-         if msg ==DISCONNECT_MESSAGE:
-            connected=False
+
+          if msg[0] == "0":
+            #serverSocketLock.acquire()
+            if available_IDS[0] != 3:
+              ID = available_IDS[0]
+              available_IDS[0] = 3
+            elif available_IDS[1] != 3:
+              ID = available_IDS[1]
+              available_IDS[1] = 3
+            elif available_IDS[2] != 3:
+              ID = available_IDS[2]
+              available_IDS[2] = 3 
+            else:
+              ID = 3
             
-         print(f"[{addr}]{msg}")
-         conn.send("msg received".encode(FORMAT))
+            ##store_player_data(str(ID))
+            
+            sent_ID = str(ID)
+            conn.send(sent_ID.encode(FORMAT))
+            
+            print("sent ID = " + sent_ID)           ## msg  -> num of operation , ID , X, Y
+          
+          elif msg[0] == "1":
+            ##arr[msg[1]] 
+            token = msg[1]
+            cars = Update(msg)
+            """if msg[1] == "0":
+              pos1[0] = int(msg[2])
+              pos1[1] = int(msg[3])
+            elif msg[1] == "1":
+              pos2[0] = int(msg[2])
+              pos2[1] = int(msg[3]) 
+            elif msg[1] == "2":
+              pos3[0] = int(msg[2])
+              pos3[1] = int(msg[3])    
+
+            car1 = str(pos1[0])+","+str(pos1[1])
+            car2 = str(pos2[0])+","+str(pos2[1])
+            car3 = str(pos3[0])+","+str(pos3[1])
+
+            cars = car1 +"*"+car2 +"*"+car3"""
+            ##with clients_lock:
+            
+            for c in clients:
+                c.send(cars.encode(FORMAT))
+                print("updated positions")
+
+            
+            
+
+
+          elif msg[0] == "2":
+            #serverSocketLock.acquire()
+            b = random.randrange(0, display_width-150)
+            b1 = random.randrange(0, display_width-150)
+            pos =BuildMessage_block(b,b1)
+            print ("Sending Blocks")
+            #with clients_lock:
+            for c in clients:
+                c.send(pos.encode(FORMAT))
+                print("sent block")
+            #serverSocketLock.release()
+
+        if msg ==DISCONNECT_MESSAGE:
+          connected=False
+            
+         #print(f"[{addr2}]{msg}")
+         #conn2.send("msg received".encode(FORMAT))
+        serverSocketLock.release()
+
+    
     conn.close()
 
-
-def start():
-    server.listen()#listening for a new connection from client 
-
-    print(f"listening server is listening on {SERVER} ")
-    while True:
+def startServer():
+      server.listen()#listening for a new connection 
+    
+      print(f"listening server 1 is listening on {SERVER1} ")
+      while True:
        #wait for a new connection to the server 
        #when the connection occur we store the address--> what ip address and what port it came from
        # then we store an actual object 
        # that will allow us to send information back to that connection 
-       conn , addr  = server.accept()
+       conn , addr1  = server.accept()
+       with clients_lock:
+          clients.append(conn)
 
        #when a new connection occur pass that connection to handle client  
-       thread= threading.Thread(target=handle_Client, args=(conn, addr))
+       thread= threading.Thread(target=handle_Client_Server, args=(conn, addr1))
        thread.start()
        #how many threads are active in this python process
        print(f"[ACTIVE CONNECTION]{threading.activeCount() - 1}") 
 
 
-       
 
-print("[STARTING] server 1 is starting....")
-start()
+if __name__ == "__main__":
+  print("[STARTING] server 2 is starting....")
+  startServer()
+
+
+
 
 
