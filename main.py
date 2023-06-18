@@ -5,6 +5,8 @@ import threading
 import pygame
 import socket
 
+#This is the main file of the game
+
 HEADER=64 #how many bytes we are going to recive it
 FORMAT='utf-8'
 DISCONNECT_MESSAGE="!DICONNECT"
