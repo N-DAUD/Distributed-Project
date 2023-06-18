@@ -1,5 +1,6 @@
 import time
 import random
+import threading
 
 import pygame
 import socket
@@ -7,10 +8,25 @@ import socket
 HEADER=64 #how many bytes we are going to recive it
 FORMAT='utf-8'
 DISCONNECT_MESSAGE="!DICONNECT"
-server1_Flag=0
-server2_Flag=1
+server1_Flag=1
+server2_Flag=0
 ClientPORT=5050
 
+serverSocketLock = threading.RLock()
+pygame.init()
+display_width = 1280
+display_height = 720
+
+pos1 = []
+pos2 = []
+pos3 = []
+ID = 0
+x = 0
+y = (display_height * 0.8)
+x1, x2, x3 = 0, 0, 0
+y1 = (display_height * 0.8)
+y2 = (display_height * 0.8)
+y3 = (display_height * 0.8)
 
 
 def UpdateServer():
@@ -119,10 +135,7 @@ def ParseMessage(st):
         return "badop", 0, 0
     return int(float(st_list[0])), int(float(st_list[1]))
 
-pygame.init()
-ID = 0
-display_width = 1280
-display_height = 720
+
 
 black = (0, 0, 0)
 white = (255, 255, 255)
@@ -220,6 +233,8 @@ def button(msg, x, y, w, h, inactive, active, action=None):
 
 
 def main_menu():
+    global ID
+
     menu = True
     UpdateServer()
     if CheckConnection() == True:
@@ -235,10 +250,6 @@ def main_menu():
         ID = int(result)
         print(ID)
 
-
-        z= 256.0
-        z_int = int(z)
-        print(z_int)
         """Send(0)
         id = client.recv((2048).decode(FORMAT))
         ID = id"""
@@ -266,13 +277,21 @@ def main_menu():
 
 def game_loop():
 
+    global ID
+    global pos1
+    global pos2
+    global pos3
+    global x1, x2, x3, y1, y2, y3
+    global x, y
+
     x = ((display_width * 0.2) + (ID*400))
-    y = (display_height * 0.8)
     x_change = 0
     y_change = 0
+    serverSocketLock.acquire()
     Send("2")
     print("after send")
     temp = client.recv(2048)
+    serverSocketLock.release()
     block = ParseMessage_block(temp.decode(FORMAT))
     print("recieved")
     block1_startx = int(block[0]) #random.randrange(0, display_width-150)
@@ -328,9 +347,11 @@ def game_loop():
 
 
         update = BuildMessage(1, ID, x, y)
+        serverSocketLock.acquire()
         Send(update)
         temp_rec = client.recv(2048)
         temp_update = temp_rec.decode(FORMAT)
+        serverSocketLock.release()
         ##print(temp_update)
         cars = ParseMessage_pos(temp_update)
         print("printing cars")
@@ -370,18 +391,20 @@ def game_loop():
 
 
         block_starty += block_speed
+        serverSocketLock.acquire()
         if ID == 0:
             car1(x, y)
             car2(x2, x2)
             car3(x3, y3)
         elif ID == 1:
             car1(x1, y1)
-            car2(x, x)
+            car2(x, y)
             car3(x3, y3)
         elif ID == 2:
             car1(x1, y1)
             car2(x2, x2)
             car3(x, y)
+        serverSocketLock.release()
         block_dodged(score)
 
         if score == 3000:
@@ -389,8 +412,10 @@ def game_loop():
 
         if block_starty > display_height:
             block_starty = 0 - display_height
+            serverSocketLock.acquire()
             Send("2")
             temp = client.recv(2048)
+            serverSocketLock.release()
             block = ParseMessage_block(temp.decode(FORMAT))
             print("received")
             block1_startx = int(block[0])
@@ -407,8 +432,10 @@ def game_loop():
                     block_speed += -1
                 score += -100
                 block_starty = 0 - display_height
+                serverSocketLock.acquire()
                 Send("2")
                 temp = client.recv(2048)
+                serverSocketLock.release()
                 block = ParseMessage_block(temp.decode(FORMAT))
                 block1_startx = int(block[0])
                 #block1_startx = random.randrange(0, display_width-150)
@@ -418,8 +445,10 @@ def game_loop():
                 print("collision happened")
                 score += -100
                 block_starty = 0 - display_height
+                serverSocketLock.acquire()
                 Send("2")
                 temp = client.recv(2048)
+                serverSocketLock.release()
                 block = ParseMessage_block(temp.decode(FORMAT))
                 block2_startx = int(block[1])
                 ##block2_startx = random.randrange(0, display_width-150)
