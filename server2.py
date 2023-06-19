@@ -252,8 +252,8 @@ def startServer2():
        # that will allow us to send information back to that connection 
         conn2, addr2 = server2.accept()  # wait for a new connection to the server (blocking line of code)
 
-        with clients_lock:
-            clients.append(conn2)
+        
+        clients.append(conn2)
 
         #when a new connection occur pass that connection to handle client  
         thread = threading.Thread(target=handle_Client_Server2, args=(conn2, addr2))  # pass the connection to handle client

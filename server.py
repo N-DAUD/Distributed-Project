@@ -266,8 +266,8 @@ def startServer():
        # then we store an actual object 
        # that will allow us to send information back to that connection 
        conn , addr1  = server.accept()
-       with clients_lock:
-          clients.append(conn)
+
+       clients.append(conn)
 
        #when a new connection occur pass that connection to handle client  
        thread= threading.Thread(target=handle_Client_Server, args=(conn, addr1))
