@@ -1,7 +1,7 @@
 import socket
 import threading
 
-HEADER=64 #how many bytes we are going to recive it 
+HEADER=64 # Number of bytes we are going to receive
 FORMAT='utf-8'
 DISCONNECT_MESSAGE="!DICONNECT"
 
@@ -48,6 +48,7 @@ def Send(msg):
          
 CheckConnection() """
 
+# Receive messages from the server.
 def client_receive():
     while True:
         try:
@@ -61,13 +62,14 @@ def client_receive():
             client.close()
             break
 
-
+#Send messages to the server.
 def client_send():
     while True:
         message = f'{alias}: {input("")}'
         client.send(message.encode('utf-8'))
 
 
+# Start receiving and sending threads
 receive_thread = threading.Thread(target=client_receive)
 receive_thread.start()
 
