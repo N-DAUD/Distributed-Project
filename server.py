@@ -42,6 +42,8 @@ pos3 = x2, y1
 
 pos_arr = pos1, pos2, pos3
 
+available_IDS = [0, 1, 2]
+
 # Print positions
 print(pos_arr[0])
 print(pos_arr[1])
@@ -198,61 +200,65 @@ def handle_Client_Server(conn, addr1):
     connected=True
     while connected:
         #wait till something is sent over the socket 
-        
-        msgLen=conn.recv(HEADER).decode(FORMAT) #blocking line of code
-        serverSocketLock.acquire()#critical section there is a lock here because that part is shared between the client threads 
-                                  #for example one client is updating the position at a time
-
-        if msgLen:
-           
-          msg_Length=int(msgLen) #first the message lenght is recieved then the actual message 
-          msg=conn.recv(msg_Length).decode(FORMAT)
-          print("received")
-
-          #msg[0] is related to the operation id 
+        try:
+          msgLen=conn.recv(HEADER).decode(FORMAT) #blocking line of code
+          serverSocketLock.acquire()#critical section there is a lock here because that part is shared between the client threads 
+                                    #for example one client is updating the position at a time
           
-          if msg[0] == "0":#if msg[0] is equal to zero then insert the IDS into variable ID then send it --> operation zero
-            if available_IDS[0] != 3:
-              ID = available_IDS[0]
-              available_IDS[0] = 3
-            elif available_IDS[1] != 3:
-              ID = available_IDS[1]
-              available_IDS[1] = 3
-            elif available_IDS[2] != 3:
-              ID = available_IDS[2]
-              available_IDS[2] = 3 
-            else:
-              ID = 3
-            sent_ID = str(ID)
-            conn.send(sent_ID.encode(FORMAT))
+          if msgLen:
             
-            print("sent ID = " + sent_ID)           ## msg  -> num of operation , ID , X, Y
-          
-          elif msg[0] == "1": #if msg[0] is equal to one then update the position of the car --> operation one
-            ##arr[msg[1]] 
-            token = msg[1]
-            cars = Update(msg)
+            msg_Length=int(msgLen) #first the message lenght is recieved then the actual message 
+            msg=conn.recv(msg_Length).decode(FORMAT)
+            print("received")
+
+            #msg[0] is related to the operation id 
             
-            for c in clients:
-                c.send(cars.encode(FORMAT))
-                print("updated positions")
-
-          elif msg[0] == "2": #if msg[0] is equal to 2 then that is related to the block generation in a random way --> operation two
-            b = random.randrange(0, display_width-150)
-            b1 = random.randrange(0, display_width-150)
-            pos =BuildMessage_block(b,b1)
-            print ("Sending Blocks")
-            for c in clients:
-                c.send(pos.encode(FORMAT))
-                print("sent block")
-
-        if msg ==DISCONNECT_MESSAGE:
-          connected=False
+            if msg[0] == "0":#if msg[0] is equal to zero then insert the IDS into variable ID then send it --> operation zero
+              if available_IDS[0] != 3:
+                ID = available_IDS[0]
+                available_IDS[0] = 3
+              elif available_IDS[1] != 3:
+                ID = available_IDS[1]
+                available_IDS[1] = 3
+              elif available_IDS[2] != 3:
+                ID = available_IDS[2]
+                available_IDS[2] = 3 
+              else:
+                ID = 3
+              sent_ID = str(ID)
+              conn.send(sent_ID.encode(FORMAT))
+              
+              print("sent ID = " + sent_ID)           ## msg  -> num of operation , ID , X, Y
             
-         #print(f"[{addr2}]{msg}")
-         #conn2.send("msg received".encode(FORMAT))
-        serverSocketLock.release()
+            elif msg[0] == "1": #if msg[0] is equal to one then update the position of the car --> operation one
+              ##arr[msg[1]] 
+              token = msg[1]
+              cars = Update(msg)
+              
+              for c in clients:
+                  c.send(cars.encode(FORMAT))
+                  print("updated positions")
 
+            elif msg[0] == "2": #if msg[0] is equal to 2 then that is related to the block generation in a random way --> operation two
+              b = random.randrange(0, display_width-150)
+              b1 = random.randrange(0, display_width-150)
+              pos =BuildMessage_block(b,b1)
+              print ("Sending Blocks")
+              for c in clients:
+                  c.send(pos.encode(FORMAT))
+                  print("sent block")
+
+          if msg ==DISCONNECT_MESSAGE:
+            connected=False
+              
+          #print(f"[{addr2}]{msg}")
+          #conn2.send("msg received".encode(FORMAT))
+          serverSocketLock.release()
+        except:
+           clients.remove(conn)
+           conn.close()
+           print("connection lost with a client")
+           break
     
     conn.close()
 
