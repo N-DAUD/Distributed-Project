@@ -53,9 +53,14 @@ FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DICONNECT"
 PORT = 5555
 
-# Server 2 socket setup
+#that line of code instead of writing --> SERVER="192.168.1.6" 
+# because we do not need to make it hard coded 
 SERVER2 = socket.gethostbyname(socket.gethostname())
 ADDR2 = (SERVER2, PORT)
+#socket.SOCK_STREAM is the socket type
+#AF_INET is the internet address family this tells what type of socket or type of ip address 
+#for specific connection 
+#socket.SOCK_STREAM we are streaming data through the socket 
 server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 try:
@@ -118,7 +123,7 @@ def delete_player_data(user_id):
         print('Player not found.')
 
 
-# Message Functions
+
 
 def BuildMessage_pos(pos_arr):
     return str(x) + "," + str(x1)
@@ -145,6 +150,11 @@ def Update(msg):
     global pos2
     global pos3
 
+    #msg[2] stores the current x position 
+    #msg[3] stores the current y position
+    #pos1[0] stores the x position of the car1
+    #pos1[1] stores the y position of the car1
+        
     serverSocketLock.acquire()
     if msg[1] == "0":
         pos1[0] = int(msg[2])
@@ -165,6 +175,9 @@ def Update(msg):
     return cars
 
 
+#this function will handle the communication between the client and the server
+#this function will run in parallel for each client  
+#conn is a socket object
 def handle_Client_Server2(conn2, addr2):
     global ID
     global available_IDS
@@ -177,14 +190,17 @@ def handle_Client_Server2(conn2, addr2):
     while connected:
         # Wait till something is sent over the socket
         msgLen = conn2.recv(HEADER).decode(FORMAT)  # blocking line of code
-        serverSocketLock.acquire()
+        serverSocketLock.acquire() #critical section there is a lock here because that part is shared between the client threads 
+                                   #for example one client is updating the position at a time
 
         if msgLen:
-            msg_Length = int(msgLen)
+            msg_Length = int(msgLen) #first the message lenght is recieved then the actual message 
             msg = conn2.recv(msg_Length).decode(FORMAT)
             print("received")
 
-            if msg[0] == "0":
+            #msg[0] is related to the operation id 
+                    
+            if msg[0] == "0": #if msg[0] is equal to zero then insert the IDS into variable ID then send it --> operation zero
                 if available_IDS[0] != 3:
                     ID = available_IDS[0]
                     available_IDS[0] = 3
@@ -201,14 +217,14 @@ def handle_Client_Server2(conn2, addr2):
                 conn2.send(sent_ID.encode(FORMAT))
                 print("sent ID = " + sent_ID)
 
-            elif msg[0] == "1":
+            elif msg[0] == "1": #if msg[0] is equal to one then update the position of the car --> operation one
                 token = msg[1]
                 cars = Update(msg)
                 for c in clients:
                     c.send(cars.encode(FORMAT))
                 print("updated positions")
 
-            elif msg[0] == "2":
+            elif msg[0] == "2":#if msg[0] is equal to 2 then that is related to the block generation in a random way --> operation two
                 b = random.randrange(0, display_width - 150)
                 b1 = random.randrange(0, display_width - 150)
                 pos = BuildMessage_block(b, b1)
@@ -220,7 +236,7 @@ def handle_Client_Server2(conn2, addr2):
         if msg == DISCONNECT_MESSAGE:
             connected = False
 
-        serverSocketLock.release()
+        serverSocketLock.release()#release the lock here
 
     conn2.close()
 
@@ -230,11 +246,16 @@ def startServer2():
 
     print(f"listening server 2 is listening on {SERVER2}")
     while True:
-        conn2, addr2 = server2.accept()  # wait for a new connection to the server
+       #wait for a new connection to the server 
+       #when the connection occur we store the address--> what ip address and what port it came from
+       # then we store an actual object 
+       # that will allow us to send information back to that connection 
+        conn2, addr2 = server2.accept()  # wait for a new connection to the server (blocking line of code)
 
         with clients_lock:
             clients.append(conn2)
 
+        #when a new connection occur pass that connection to handle client  
         thread = threading.Thread(target=handle_Client_Server2, args=(conn2, addr2))  # pass the connection to handle client
         thread.start()
 
