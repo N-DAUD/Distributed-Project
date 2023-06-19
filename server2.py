@@ -188,56 +188,60 @@ def handle_Client_Server2(conn2, addr2):
     print(f"[NEW CONNECTION] {addr2} connected.")
     connected = True
     while connected:
-        # Wait till something is sent over the socket
-        msgLen = conn2.recv(HEADER).decode(FORMAT)  # blocking line of code
-        serverSocketLock.acquire() #critical section there is a lock here because that part is shared between the client threads 
-                                   #for example one client is updating the position at a time
+        try:
+            # Wait till something is sent over the socket
+            msgLen = conn2.recv(HEADER).decode(FORMAT)  # blocking line of code
+            serverSocketLock.acquire() #critical section there is a lock here because that part is shared between the client threads 
+                                    #for example one client is updating the position at a time
 
-        if msgLen:
-            msg_Length = int(msgLen) #first the message lenght is recieved then the actual message 
-            msg = conn2.recv(msg_Length).decode(FORMAT)
-            print("received")
+            if msgLen:
+                msg_Length = int(msgLen) #first the message lenght is recieved then the actual message 
+                msg = conn2.recv(msg_Length).decode(FORMAT)
+                print("received")
 
-            #msg[0] is related to the operation id 
-                    
-            if msg[0] == "0": #if msg[0] is equal to zero then insert the IDS into variable ID then send it --> operation zero
-                if available_IDS[0] != 3:
-                    ID = available_IDS[0]
-                    available_IDS[0] = 3
-                elif available_IDS[1] != 3:
-                    ID = available_IDS[1]
-                    available_IDS[1] = 3
-                elif available_IDS[2] != 3:
-                    ID = available_IDS[2]
-                    available_IDS[2] = 3
-                else:
-                    ID = 3
+                #msg[0] is related to the operation id 
+                        
+                if msg[0] == "0": #if msg[0] is equal to zero then insert the IDS into variable ID then send it --> operation zero
+                    if available_IDS[0] != 3:
+                        ID = available_IDS[0]
+                        available_IDS[0] = 3
+                    elif available_IDS[1] != 3:
+                        ID = available_IDS[1]
+                        available_IDS[1] = 3
+                    elif available_IDS[2] != 3:
+                        ID = available_IDS[2]
+                        available_IDS[2] = 3
+                    else:
+                        ID = 3
 
-                sent_ID = str(ID)
-                conn2.send(sent_ID.encode(FORMAT))
-                print("sent ID = " + sent_ID)
+                    sent_ID = str(ID)
+                    conn2.send(sent_ID.encode(FORMAT))
+                    print("sent ID = " + sent_ID)
 
-            elif msg[0] == "1": #if msg[0] is equal to one then update the position of the car --> operation one
-                token = msg[1]
-                cars = Update(msg)
-                for c in clients:
-                    c.send(cars.encode(FORMAT))
-                print("updated positions")
+                elif msg[0] == "1": #if msg[0] is equal to one then update the position of the car --> operation one
+                    token = msg[1]
+                    cars = Update(msg)
+                    for c in clients:
+                        c.send(cars.encode(FORMAT))
+                    print("updated positions")
 
-            elif msg[0] == "2":#if msg[0] is equal to 2 then that is related to the block generation in a random way --> operation two
-                b = random.randrange(0, display_width - 150)
-                b1 = random.randrange(0, display_width - 150)
-                pos = BuildMessage_block(b, b1)
-                print("Sending Blocks")
-                for c in clients:
-                    c.send(pos.encode(FORMAT))
-                print("sent block")
+                elif msg[0] == "2":#if msg[0] is equal to 2 then that is related to the block generation in a random way --> operation two
+                    b = random.randrange(0, display_width - 150)
+                    b1 = random.randrange(0, display_width - 150)
+                    pos = BuildMessage_block(b, b1)
+                    print("Sending Blocks")
+                    for c in clients:
+                        c.send(pos.encode(FORMAT))
+                    print("sent block")
 
-        if msg == DISCONNECT_MESSAGE:
-            connected = False
+            if msg == DISCONNECT_MESSAGE:
+                connected = False
 
-        serverSocketLock.release()#release the lock here
-
+            serverSocketLock.release()#release the lock here
+        except:
+            clients.remove(conn2)
+            conn2.close()
+            print("connection lost with a client")
     conn2.close()
 
 
