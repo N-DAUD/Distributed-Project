@@ -4,65 +4,67 @@ import random
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
+# MongoDB connection details
 password = "bs91HZDXuubCNpsE"
 uri = f"mongodb+srv://mostafahesham1939:{password}@games.w7y92bm.mongodb.net/?retryWrites=true&w=majority"
 
+# Connect to MongoDB
 clientdb = MongoClient(uri, server_api=ServerApi('1'))
 
+# Select database and collection
 db = clientdb['projectgame']
 collection = db['players']
 
 print("Connected to MongoDB.")
 
+# List to store connected clients
 clients = []
 clients_lock = threading.Lock()
+
+# Game display dimensions
 display_width = 1280
 display_height = 720
+
+# Lock for server socket
 serverSocketLock = threading.RLock()
 
+# Player IDs and positions
 ID = 3
-x=(display_width * 0.2) 
-x1=((display_width * 0.2) + 400)
-x2=((display_width * 0.2) + 800)
-y= display_height*0.8
-y1= display_height*0.8
-y2= display_height*0.8
-pos1= x, y
-pos2= x1, y1
-pos3= x2, y1
+x = (display_width * 0.2) 
+x1 = ((display_width * 0.2) + 400)
+x2 = ((display_width * 0.2) + 800)
+y = display_height * 0.8
+y1 = display_height * 0.8
+y2 = display_height * 0.8
+pos1 = x, y
+pos2 = x1, y1
+pos3 = x2, y1
 
 pos_arr = pos1, pos2, pos3
 
-
-available_IDS = [0, 1, 2]
-
+# Print positions
 print(pos_arr[0])
 print(pos_arr[1])
 print(pos_arr[2])
 
-
-
-
-HEADER=64 #how many bytes we are going to recive it 
-FORMAT='utf-8'
-DISCONNECT_MESSAGE="!DICONNECT"
+# Server configuration
+HEADER = 64  # how many bytes we are going to receive
+FORMAT = 'utf-8'
+DISCONNECT_MESSAGE = "!DICONNECT"
 PORT = 5050
 
-#def Server2NewConnection():
-#that line of code instead of writing --> SERVER="192.168.1.6" 
-# because we do not need to make it hard coded 
-SERVER1=socket.gethostbyname(socket.gethostname())
-ADDR1=(SERVER1, PORT)
+# Server socket setup
+SERVER1 = socket.gethostbyname(socket.gethostname())
+ADDR1 = (SERVER1, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 try:
- server.bind(ADDR1) #bind the socket to the address 
-
+    server.bind(ADDR1)  # bind the socket to the address
 except socket.error as e:
-  print(str(e))
+    print(str(e))
 
 
-#Database functions#
+# Database functions
 def store_player_data(user_id, user_score, win_user):
     data = {
         'user_id': user_id,
@@ -105,6 +107,7 @@ def increment_player_score(user_id, increment):
         {'$inc': {'user_score': increment}}
     )
     print('Player score incremented successfully.')
+
 
 
 def delete_player_data(user_id):
