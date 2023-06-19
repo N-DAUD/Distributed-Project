@@ -85,7 +85,7 @@ def startServerChat():
        thread.start()
        #how many threads are active in this python process
        ##print(f"[ACTIVE CONNECTION]{threading.activeCount() - 1}") 
-
+       ##
 
 
 if __name__ == "__main__":
