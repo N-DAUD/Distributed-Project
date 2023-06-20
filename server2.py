@@ -27,6 +27,11 @@ display_height = 720
 
 # Lock for server socket
 serverSocketLock = threading.RLock()
+ID_lock = threading.Lock()
+available_IDS_lock = threading.Lock()
+pos_lock = threading.Lock()
+clients_lock = threading.Lock()
+block_lock = threading.Lock()
 
 # Player IDs and positions
 ID = 3
@@ -36,13 +41,13 @@ x2 = ((display_width * 0.2) + 800)
 y = display_height * 0.8
 y1 = display_height * 0.8
 y2 = display_height * 0.8
-pos1 = x, y
-pos2 = x1, y1
-pos3 = x2, y1
+pos1 = [x, y]
+pos2 = [x1, y1]
+pos3 = [x2, y1]
 
 pos_arr = pos1, pos2, pos3
 
-available_IDS = [0, 1, 2]
+available_IDS = [0.0, 1.0, 2.0]
 
 print(pos_arr[0])
 print(pos_arr[1])
@@ -130,22 +135,23 @@ def BuildMessage_pos(pos_arr):
 
 
 def BuildMessage_block(x, x1):
-    serverSocketLock.acquire()
+    #serverSocketLock.acquire()
     string = str(x) + "," + str(x1)
-    serverSocketLock.release()
+    #serverSocketLock.release()
     return string
 
 
 def ParseMessage(st):
-    serverSocketLock.acquire()
+    #serverSocketLock.acquire()
     st_list = st.split(',')
-    if len(st_list) < 4:
-        return "badop", 0, 0
-    serverSocketLock.release()
-    return str(st_list[0]), str(st_list[1]), str(st_list[2]), str(st_list[3])
+    """if len(st_list) < 4:
+        return 0 , 0, 0, 0"""
+    #serverSocketLock.release()
+    print(st_list)
+    return st_list[0], st_list[1], st_list[2], st_list[3]
 
 
-def Update(msg):
+def Update(token,temp_msg):
     global pos1
     global pos2
     global pos3
@@ -155,23 +161,20 @@ def Update(msg):
     #pos1[0] stores the x position of the car1
     #pos1[1] stores the y position of the car1
         
-    serverSocketLock.acquire()
-    if msg[1] == "0":
-        pos1[0] = int(msg[2])
-        pos1[1] = int(msg[3])
-    elif msg[1] == "1":
-        pos2[0] = int(msg[2])
-        pos2[1] = int(msg[3])
-    elif msg[1] == "2":
-        pos3[0] = int(msg[2])
-        pos3[1] = int(msg[3])
+    #serverSocketLock.acquire()
+    if token == 0:
+        pos1[0] = float(temp_msg[0])
+        pos1[1] = float(temp_msg[1])
+    elif token == 1:
+        pos2[0] = float(temp_msg[0])
+        pos2[1] = float(temp_msg[1])
+    elif token == 2:
+        pos3[0] = float(temp_msg[0])
+        pos3[1] = float(temp_msg[1])
 
-    car1 = str(pos1[0]) + "," + str(pos1[1])
-    car2 = str(pos2[0]) + "," + str(pos2[1])
-    car3 = str(pos3[0]) + "," + str(pos3[1])
 
-    cars = car1 + "*" + car2 + "*" + car3
-    serverSocketLock.release()
+    cars =  str(pos1[0]) + "," + str(pos1[1]) +","+ str(pos2[0]) + "," + str(pos2[1]) +","+ str(pos3[0]) + "," + str(pos3[1])  ## car1 +"*"+ car2 +"*"+ car3
+    #serverSocketLock.release()
     return cars
 
 
@@ -179,70 +182,90 @@ def Update(msg):
 #this function will run in parallel for each client  
 #conn is a socket object
 def handle_Client_Server2(conn2, addr2):
-    global ID
-    global available_IDS
-    global pos1
-    global pos2
-    global pos3
+        global ID
+        global available_IDS
+        global pos1
+        global pos2
+        global pos3
 
-    print(f"[NEW CONNECTION] {addr2} connected.")
-    connected = True
-    while connected:
-        try:
-            # Wait till something is sent over the socket
-            msgLen = conn2.recv(HEADER).decode(FORMAT)  # blocking line of code
-            serverSocketLock.acquire() #critical section there is a lock here because that part is shared between the client threads 
-                                    #for example one client is updating the position at a time
+        print(f"[NEW CONNECTION] {addr2} connected.")
+        connected = True
+        while connected:
+            try:
+                # Wait till something is sent over the socket
+                
+                #print("I am here 1")
+                msgLen = conn2.recv(HEADER).decode(FORMAT)  # blocking line of code
+                
+                ##serverSocketLock.acquire() #critical section there is a lock here because that part is shared between the client threads 
+                                        #for example one client is updating the position at a time
 
-            if msgLen:
-                msg_Length = int(msgLen) #first the message lenght is recieved then the actual message 
-                msg = conn2.recv(msg_Length).decode(FORMAT)
-                print("received")
+                if msgLen:
+                    msg_Length = int(msgLen) #first the message lenght is recieved then the actual message 
+                    msg =ParseMessage(conn2.recv(msg_Length).decode(FORMAT)) 
+                    print(msg)
+                    print("received")
 
-                #msg[0] is related to the operation id 
-                        
-                if msg[0] == "0": #if msg[0] is equal to zero then insert the IDS into variable ID then send it --> operation zero
-                    if available_IDS[0] != 3:
-                        ID = available_IDS[0]
-                        available_IDS[0] = 3
-                    elif available_IDS[1] != 3:
-                        ID = available_IDS[1]
-                        available_IDS[1] = 3
-                    elif available_IDS[2] != 3:
-                        ID = available_IDS[2]
-                        available_IDS[2] = 3
-                    else:
-                        ID = 3
+                    #msg[0] is related to the operation id 
+                            
+                    if msg[0] == "0": #if msg[0] is equal to zero then insert the IDS into variable ID then send it --> operation zero
+                        print("I am here 2")
+                        if available_IDS[0] != 3.0:
+                            with available_IDS_lock:
+                                ID = available_IDS[0]
+                                available_IDS[0] = 3.0
+                        elif available_IDS[1] != 3.0:
+                            with available_IDS_lock:
+                                ID = available_IDS[1]
+                                available_IDS[1] = 3.0
+                        elif available_IDS[2] != 3.0:
+                            with available_IDS_lock:
+                                ID = available_IDS[2]
+                                available_IDS[2] = 3.0
+                        else:
+                            ID = 3.0
 
-                    sent_ID = str(ID)
-                    conn2.send(sent_ID.encode(FORMAT))
-                    print("sent ID = " + sent_ID)
+                        sent_ID = str(ID)
+                        print(sent_ID)
+                        conn2.send(sent_ID.encode(FORMAT))
+                        print("sent ID = " + sent_ID)
 
-                elif msg[0] == "1": #if msg[0] is equal to one then update the position of the car --> operation one
-                    token = msg[1]
-                    cars = Update(msg)
-                    for c in clients:
-                        c.send(cars.encode(FORMAT))
-                    print("updated positions")
+                    elif msg[0] == "1": #if msg[0] is equal to one then update the position of the car --> operation one
+                        print("I am here 3")
+                        token = int(msg[1])
+                        temp_msg = [msg[2], msg[3]]
+                        with pos_lock:
+                            cars = Update(token, temp_msg)
+                        print("I am here 4")
+                        print(cars)
+                        with clients_lock:
+                            for c in clients:
+                                c.send(cars.encode(FORMAT))
+                        print("updated positions")
 
-                elif msg[0] == "2":#if msg[0] is equal to 2 then that is related to the block generation in a random way --> operation two
-                    b = random.randrange(0, display_width - 150)
-                    b1 = random.randrange(0, display_width - 150)
-                    pos = BuildMessage_block(b, b1)
-                    print("Sending Blocks")
-                    for c in clients:
-                        c.send(pos.encode(FORMAT))
-                    print("sent block")
+                    elif msg[0] == "2":#if msg[0] is equal to 2 then that is related to the block generation in a random way --> operation two
+                        print("I am here 5")
+                        with block_lock:
+                            b1 = random.randrange(0, display_width - 150)
+                            b2 = random.randrange(0, display_width - 150)
+                            pos = BuildMessage_block(b1, b2)
+                        print(pos)
+                        print("Sending Blocks")
+                        with clients_lock:
+                            for c in clients:
+                                c.send(pos.encode(FORMAT))
+                        print("sent block")
 
-            if msg == DISCONNECT_MESSAGE:
-                connected = False
+                if msg == DISCONNECT_MESSAGE:
+                    connected = False
 
-            serverSocketLock.release()#release the lock here
-        except:
-            clients.remove(conn2)
-            conn2.close()
-            print("connection lost with a client")
-    conn2.close()
+                #serverSocketLock.release()#release the lock here
+            except:
+                clients.remove(conn2)
+                conn2.close()
+                print("connection lost with a client")
+                break
+        conn2.close()
 
 
 def startServer2():
