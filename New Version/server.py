@@ -4,15 +4,12 @@ from _thread import *
 from player import Player
 from block import Block
 import pickle
-import cv2
 import random
 import pygame
 
 server = socket.gethostbyname(socket.gethostname())    #put the ip of the host
 port = 5050
-img1 = cv2.imread('car_black_small_1.png')
-img2 = cv2.imread('car_blue_small_1.png')
-img3 = cv2.imread('car_red_small_1.png')
+
 x1 = random.randrange(0,1200)
 x2 = random.randrange(0,1200)
 
