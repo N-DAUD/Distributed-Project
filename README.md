@@ -1,7 +1,7 @@
 # Distributed-Project
 
 Steps to run the project:\
-1- Start the server.py or server2.py depending on the serverflag set in the main\
+1- Start the server.py or server2.py depending on the serverflag and the port number set in the main\
 2- Start one or more instance of main.py\
 3- Press START to play\
 \
